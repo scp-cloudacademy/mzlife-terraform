@@ -2,11 +2,11 @@
 
 # VPC Outputs
 output "vpc_id" {
-  value = samsungcloudplatform_vpc.vpc.id
+  value = samsungcloudplatform_vpc.mz_vpc.id
 }
 
 output "vpc_name" {
-  value = samsungcloudplatform_vpc.vpc.name
+  value = samsungcloudplatform_vpc.mz_vpc.name
 }
 
 # Internet Gateway Outputs
@@ -54,6 +54,18 @@ output "file_storage_name_uuid" {
   value = samsungcloudplatform_file_storage.storage.file_storage_name_uuid
 }
 
+# Key Pair Outputs
+output "bastion_keypair_id" {
+  value       = samsungcloudplatform_key_pair.bastion_keypair.id
+  description = "ID of the bastion key pair"
+}
+
+output "bastion_private_key" {
+  value       = samsungcloudplatform_key_pair.bastion_keypair.private_key
+  sensitive   = true
+  description = "Private key for bastion SSH access. Use 'terraform output -raw bastion_private_key > mykey.pem' to save"
+}
+
 # Security Group Outputs
 output "bastion_security_group_id" {
   value = samsungcloudplatform_security_group.bastion_sg.id
@@ -65,23 +77,23 @@ output "k8s_security_group_id" {
 
 # Bastion Host Outputs
 output "bastion_server_id" {
-  value = samsungcloudplatform_virtual_server.bastion_host.id
+  value = samsungcloudplatform_virtual_server.bastion_vm.id
 }
 
 output "bastion_server_name" {
-  value = samsungcloudplatform_virtual_server.bastion_host.virtual_server_name
+  value = samsungcloudplatform_virtual_server.bastion_vm.virtual_server_name
 }
 
 output "bastion_internal_ip" {
-  value = samsungcloudplatform_virtual_server.bastion_host.ipv4
+  value = samsungcloudplatform_virtual_server.bastion_vm.ipv4
 }
 
 output "bastion_nat_ip" {
-  value = samsungcloudplatform_virtual_server.bastion_host.nat_ipv4
+  value = samsungcloudplatform_virtual_server.bastion_vm.nat_ipv4
 }
 
 output "bastion_server_security_group_ids" {
-  value       = samsungcloudplatform_virtual_server.bastion_host.security_group_ids
+  value       = samsungcloudplatform_virtual_server.bastion_vm.security_group_ids
   description = "Security group IDs attached to bastion server"
 }
 
