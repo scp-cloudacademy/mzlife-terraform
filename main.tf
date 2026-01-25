@@ -31,10 +31,6 @@ data "samsungcloudplatform_standard_image" "bastion_image" {
   }
 }
 
-data "samsungcloudplatform_key_pairs" "bastion_keypair" {
-  key_pair_name = var.bastion_key_pair_name
-}
-
 # ============================================
 # Resources
 # ============================================
@@ -47,31 +43,31 @@ resource "samsungcloudplatform_vpc" "mz_vpc" {
 
 # 2. Internet Gateway
 resource "samsungcloudplatform_internet_gateway" "igw" {
-  vpc_id     = samsungcloudplatform_vpc.vpc.id
+  vpc_id     = samsungcloudplatform_vpc.mz_vpc.id
   igw_type   = var.igw_type
-  depends_on = [samsungcloudplatform_vpc.vpc]
+  depends_on = [samsungcloudplatform_vpc.mz_vpc]
 }
 
 # 3. Public Subnet for Bastion VM 
 resource "samsungcloudplatform_subnet" "bastion_subnet" {
-  vpc_id     = samsungcloudplatform_vpc.vpc.id
+  vpc_id     = samsungcloudplatform_vpc.mz_vpc.id
   name       = var.bastion_subnet_name
   type       = "PUBLIC"
   cidr_ipv4  = var.bastion_subnet_cidr
   depends_on = [
-    samsungcloudplatform_vpc.vpc, 
+    samsungcloudplatform_vpc.mz_vpc, 
     samsungcloudplatform_internet_gateway.igw
   ]
 }
 
 # 4. Private Subnet for Kubernetes Cluster
 resource "samsungcloudplatform_subnet" "k8s_subnet" {
-  vpc_id     = samsungcloudplatform_vpc.vpc.id
+  vpc_id     = samsungcloudplatform_vpc.mz_vpc.id
   name       = var.k8s_subnet_name
   type       = "PRIVATE"
   cidr_ipv4  = var.k8s_subnet_cidr
   depends_on = [
-    samsungcloudplatform_vpc.vpc, 
+    samsungcloudplatform_vpc.mz_vpc, 
     samsungcloudplatform_internet_gateway.igw
   ]
 }
@@ -84,11 +80,11 @@ resource "samsungcloudplatform_nat_gateway" "nat" {
 
 # 6. Load Balancer
 resource "samsungcloudplatform_load_balancer" "lb" {
-  vpc_id     = samsungcloudplatform_vpc.vpc.id
+  vpc_id     = samsungcloudplatform_vpc.mz_vpc.id
   name        = "${var.prefix}LB"
   size       = var.load_balancer_size
   cidr_ipv4  = var.lb_cidr_ipv4
-  depends_on = [samsungcloudplatform_vpc.vpc]
+  depends_on = [samsungcloudplatform_vpc.mz_vpc]
 }
 
 # 7. File Storage
@@ -98,13 +94,13 @@ resource "samsungcloudplatform_file_storage" "storage" {
   file_storage_protocol = var.file_storage_protocol
   product_names         = var.file_storage_product_names
   service_zone_id       = data.samsungcloudplatform_region.region.id
-  depends_on            = [samsungcloudplatform_vpc.vpc]
+  depends_on            = [samsungcloudplatform_vpc.mz_vpc]
 }
 
 # 8. Internet Gateway Firewall Rules
 
 data "samsungcloudplatform_firewall" "igw_firewall" {
-  vpc_id    = samsungcloudplatform_vpc.vpc.id
+  vpc_id    = samsungcloudplatform_vpc.mz_vpc.id
   target_id = samsungcloudplatform_internet_gateway.igw.id
   depends_on = [samsungcloudplatform_internet_gateway.igw]
 }
@@ -183,10 +179,10 @@ resource "samsungcloudplatform_firewall_rule" "igw_rule_d_k8s_outbound" {
 
 # 9. Security Group for Bastion VM 
 resource "samsungcloudplatform_security_group" "bastion_sg" {
-  vpc_id      = samsungcloudplatform_vpc.vpc.id
+  vpc_id      = samsungcloudplatform_vpc.mz_vpc.id
   name        = var.bastion_sg_name
   is_loggable = var.bastion_sg_loggable
-  depends_on  = [samsungcloudplatform_vpc.vpc]
+  depends_on  = [samsungcloudplatform_vpc.mz_vpc]
 }
 
 resource "samsungcloudplatform_security_group_rule" "bastion_rule_g_ssh_inbound" {
@@ -219,10 +215,10 @@ resource "samsungcloudplatform_security_group_rule" "bastion_rule_h_http_outboun
 
 # 10. Security Group for Kubernetes Cluster
 resource "samsungcloudplatform_security_group" "k8s_sg" {
-  vpc_id      = samsungcloudplatform_vpc.vpc.id
+  vpc_id      = samsungcloudplatform_vpc.mz_vpc.id
   name        = var.k8s_sg_name
   is_loggable = var.k8s_sg_loggable
-  depends_on  = [samsungcloudplatform_vpc.vpc]
+  depends_on  = [samsungcloudplatform_vpc.mz_vpc]
 }
 
 resource "samsungcloudplatform_security_group_rule" "k8s_rule_f_outbound" {
@@ -245,14 +241,19 @@ resource "samsungcloudplatform_security_group_rule" "k8s_rule_f_outbound" {
   depends_on  = [samsungcloudplatform_security_group.k8s_sg]
 }
 
-# 11. Virtual Server for Bastion
+# 11. Key Pair for Bastion VM
+resource "samsungcloudplatform_key_pair" "bastion_keypair" {
+  key_pair_name = var.bastion_key_pair_name
+}
+
+# 12. Virtual Server for Bastion
 resource "samsungcloudplatform_virtual_server" "bastion_vm" {
   virtual_server_name = var.bastion_server_name
-  key_pair_id         = length(data.samsungcloudplatform_key_pairs.bastion_keypair.contents) > 0 ? data.samsungcloudplatform_key_pairs.bastion_keypair.contents[0].key_pair_id : null
+  key_pair_id         = samsungcloudplatform_key_pair.bastion_keypair.id
 
   server_type = "s1v1m2"
   image_id    = data.samsungcloudplatform_standard_image.bastion_image.id
-  vpc_id      = samsungcloudplatform_vpc.vpc.id
+  vpc_id      = samsungcloudplatform_vpc.mz_vpc.id
   subnet_id   = samsungcloudplatform_subnet.bastion_subnet.id
 
   state = "RUNNING"
@@ -266,14 +267,14 @@ resource "samsungcloudplatform_virtual_server" "bastion_vm" {
   nat_enabled = true
 
   depends_on = [
-    samsungcloudplatform_vpc.vpc,
+    samsungcloudplatform_vpc.mz_vpc,
     samsungcloudplatform_internet_gateway.igw,
     samsungcloudplatform_subnet.bastion_subnet,
     samsungcloudplatform_security_group.bastion_sg
   ]
 }
 
-# 12. Kubernetes Engine
+# 13. Kubernetes Engine
 resource "samsungcloudplatform_kubernetes_engine" "cluster" {
   count = var.create_kubernetes_cluster ? 1 : 0
 
@@ -281,7 +282,7 @@ resource "samsungcloudplatform_kubernetes_engine" "cluster" {
   kubernetes_version = var.k8s_version
 
   # Network
-  vpc_id            = samsungcloudplatform_vpc.vpc.id
+  vpc_id            = samsungcloudplatform_vpc.mz_vpc.id
   subnet_id         = samsungcloudplatform_subnet.k8s_subnet.id
   security_group_id = samsungcloudplatform_security_group.k8s_sg.id
 
@@ -299,7 +300,7 @@ resource "samsungcloudplatform_kubernetes_engine" "cluster" {
   ]
 }
 
-# 13. Kubernetes Node Pool
+# 14. Kubernetes Node Pool
 resource "samsungcloudplatform_kubernetes_node_pool" "node_pool" {
   for_each = var.create_kubernetes_cluster ? { for idx, pool in var.k8s_node_pools : idx => pool } : {}
 
