@@ -152,7 +152,7 @@ variable "k8s_node_pools" {
     {
       node_pool_name         = "node"
       image_id               = "IMAGE-P2TZSc96tEjQpFaufbNrWb"
-      scale_name             = "s1v4m16"
+      scale_name             = "s1v2m8"
       storage_name           = "SSD"
       storage_size_gb        = "100"
       encrypt_enabled        = false
