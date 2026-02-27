@@ -3,7 +3,7 @@
 terraform {
   required_providers {
     samsungcloudplatform = {
-      version = "3.16.0"
+      version = "3.16.1"
       source  = "SamsungSDSCloud/samsungcloudplatform"
     }
   }
@@ -324,3 +324,4 @@ resource "samsungcloudplatform_kubernetes_node_pool" "node_pool" {
   min_node_count = each.value.auto_scale ? each.value.min_node_count : null
   max_node_count = each.value.auto_scale ? each.value.max_node_count : null
 }
+
